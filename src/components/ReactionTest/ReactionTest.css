@@ -1,0 +1,34 @@
+.reaction-test-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: Arial, sans-serif;
+    text-align: center;
+  }
+  
+  .reaction-box {
+    width: 200px;
+    height: 200px;
+    border: 2px solid #000;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .reaction-box.idle {
+    background-color: lightgray;
+  }
+  
+  .reaction-box.waiting {
+    background-color: red;
+  }
+  
+  .reaction-box.ready {
+    background-color: yellowgreen;
+  }
+  
+  p {
+    margin-top: 20px;
+    font-size: 18px;
+  }
+  

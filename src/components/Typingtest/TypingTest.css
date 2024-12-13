@@ -1,0 +1,16 @@
+.caret {
+    display: inline-block;
+    width: 2px; /* Width of the caret */
+    height: 1.2em; /* Fixed height */
+    background-color: black; /* Caret color */
+    animation: blink 1s step-end infinite; /* Blinking effect */
+    margin-left: 0.1em; /* Space from character */
+    margin-top: -0.2em; /* Adjust this value to shift the caret up or down */
+    vertical-align: middle; /* Keep caret vertically aligned */
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
+}

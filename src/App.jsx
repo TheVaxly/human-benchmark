@@ -1,35 +1,51 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import ReactionTimeTest from "./components/ReactionTest/ReactionTest.jsx";
+import TypingTest from "./components/Typingtest/TypingTest.jsx";
+import MemoryTest from "./components/CardTest/CardTest.jsx";
+import VoiceTest from "./components/VoiceTest/VoiceTest.jsx";
+import NumberTest from "./components/NumberTest/NumberTest.jsx";
 
-function App() {
-  const [count, setCount] = useState(0)
-
+const App = () => {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <Router>
+      <div className="container mt-5 text-center">
+        <h1>Skill Test Hub</h1>
+        <nav className="mb-4">
+          <Link to="/typing-test" className="btn btn-primary me-2">
+            Typing Test
+          </Link>
+          <Link to="/reaction-time-test" className="btn btn-secondary">
+            Reaction Time Test
+          </Link>
+          <Link to="/Card-test" className="btn btn-info ms-2">
+            Card Test
+          </Link>
+          <Link to="/Voice-test" className="btn btn-info ms-2">
+            Voice Test
+          </Link>
+          <Link to="/Number-test" className="btn btn-info ms-2">
+            Number Test
+          </Link>
+        </nav>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/typing-test" element={<TypingTest />} />
+          <Route path="/reaction-time-test" element={<ReactionTimeTest />} />
+          <Route path="/card-test" element={<MemoryTest />} />
+          <Route path="/voice-test" element={<VoiceTest />} />
+          <Route path="/number-test" element={<NumberTest />} />
+        </Routes>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    </Router>
+  );
+};
 
-export default App
+const Home = () => (
+  <div>
+    <h2>Welcome to the Skill Test Hub</h2>
+    <p>Choose a test to get started!</p>
+  </div>
+);
+
+export default App;
