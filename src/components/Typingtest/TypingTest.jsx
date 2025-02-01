@@ -1,20 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
-import quotesData from "../../data/quotes.json";
+import english5kData from "../../data/english_5k.json";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./TypingTest.css";
 
 const TypingTest = ({ duration = 60 }) => {
-  const [text, setText] = useState(""); 
-  const [typedWords, setTypedWords] = useState([]); 
-  const [wordStatuses, setWordStatuses] = useState([]); 
-  const [currentWordIndex, setCurrentWordIndex] = useState(0); 
-  const [currentInput, setCurrentInput] = useState(""); 
-  const [timer, setTimer] = useState(duration); 
-  const [isRunning, setIsRunning] = useState(false); 
-  const [wpm, setWpm] = useState(null); 
-  const [accuracy, setAccuracy] = useState(null); 
+  const [text, setText] = useState("");
+  const [typedWords, setTypedWords] = useState([]);
+  const [wordStatuses, setWordStatuses] = useState([]);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [currentInput, setCurrentInput] = useState("");
+  const [timer, setTimer] = useState(duration);
+  const [isRunning, setIsRunning] = useState(false);
+  const [wpm, setWpm] = useState(null);
+  const [accuracy, setAccuracy] = useState(null);
+  const [allTypedWords, setAllTypedWords] = useState([]);
+  const [allWordStatuses, setAllWordStatuses] = useState([]);
 
-  const containerRef = useRef(null); 
+  const containerRef = useRef(null);
 
   useEffect(() => {
     fetchInitialText();
@@ -31,7 +33,6 @@ const TypingTest = ({ duration = 60 }) => {
     return () => clearInterval(interval);
   }, [isRunning, timer]);
 
-  // Focus on the container when component mounts or is reset
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.focus();
@@ -39,54 +40,53 @@ const TypingTest = ({ duration = 60 }) => {
   }, [timer]);
 
   const fetchInitialText = () => {
-    const shuffledQuotes = quotesData.sort(() => 0.5 - Math.random());
-    const combinedText = shuffledQuotes
-      .map((quote) => quote.quote)
-      .slice(0, 5)
-      .join(" ");
-    setText(combinedText);
+    const shuffledWords = [...english5kData.words].sort(() => 0.5 - Math.random()).slice(0, 60);
+    
+    const line1 = shuffledWords.slice(0, 20).join(" ");
+    const line2 = shuffledWords.slice(20, 40).join(" ");
+    const line3 = shuffledWords.slice(40, 60).join(" ");
+    
+    const finalText = [line1, line2, line3].join("\n");
+    
+    setText(finalText);
     setTypedWords([]);
-    setWordStatuses(new Array(combinedText.split(" ").length).fill(null));
+    setWordStatuses(new Array(shuffledWords.length).fill(null));
     setCurrentWordIndex(0);
     setCurrentInput("");
   };
 
   const handleKeyPress = (event) => {
     if (timer === 0) {
-        return;
+      return;
     }
     if (!isRunning) setIsRunning(true);
 
     const key = event.key;
 
     if (key === "Backspace") {
-        if (currentInput.length > 0) {
-            // If the current input is not empty, just delete the last character
-            setCurrentInput((prev) => prev.slice(0, -1));
-        } else if (currentWordIndex > 0) {
-            const previousIndex = currentWordIndex - 1;
+      if (currentInput.length > 0) {
+        setCurrentInput((prev) => prev.slice(0, -1));
+      } else if (currentWordIndex > 0) {
+        const previousIndex = currentWordIndex - 1;
 
-            // Only allow going back if the previous word is incorrect
-            if (wordStatuses[previousIndex] === "incorrect") {
-                setCurrentWordIndex(previousIndex);
-                setCurrentInput(typedWords[previousIndex]); // Restore the previous input
-                // Reset the status of the previous word when going back
-                setWordStatuses((prevStatuses) => {
-                    const updatedStatuses = [...prevStatuses];
-                    updatedStatuses[previousIndex] = null; // Reset status to null
-                    return updatedStatuses;
-                });
-            }
-            // If the previous word is correct, do nothing (stay on the current word)
+        if (wordStatuses[previousIndex] === "incorrect") {
+          setCurrentWordIndex(previousIndex);
+          setCurrentInput(typedWords[previousIndex]);
+          setWordStatuses((prevStatuses) => {
+            const updatedStatuses = [...prevStatuses];
+            updatedStatuses[previousIndex] = null;
+            return updatedStatuses;
+          });
         }
+      }
     } else if (key === " ") {
-        if (currentInput.trim().length > 0) {
-            handleWordCompletion();
-        }
+      if (currentInput.trim().length > 0) {
+        handleWordCompletion();
+      }
     } else if (key.length === 1) {
-        setCurrentInput((prev) => prev + key);
+      setCurrentInput((prev) => prev + key);
     }
-};
+  };
 
   const handleWordCompletion = () => {
     const words = text.split(" ");
@@ -102,14 +102,28 @@ const TypingTest = ({ duration = 60 }) => {
     setTypedWords(updatedTypedWords);
     setWordStatuses(updatedStatuses);
 
+    setAllTypedWords((prev) => [...prev, currentInput.trim()]);
+    setAllWordStatuses((prev) => [...prev, isCorrect ? "correct" : "incorrect"]);
+
     setCurrentInput("");
     setCurrentWordIndex((prev) => prev + 1);
+
+    if (currentWordIndex + 1 >= words.length) {
+      fetchInitialText();
+    }
+  };
+
+  const getNewLineText = () => {
+    const newWords = [...english5kData.words]
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 20)
+      .join(" ");
+    return newWords;
   };
 
   const calculateResults = () => {
-    const correctWords = wordStatuses.filter((status) => status === "correct").length;
-    const attemptedWords = wordStatuses.filter((status) => status !== null).length;
-
+    const correctWords = allWordStatuses.filter((status) => status === "correct").length;
+    const attemptedWords = allWordStatuses.length;
     const timeElapsed = (duration - timer) / 60;
     const calculatedWpm = Math.round(correctWords / timeElapsed);
     const calculatedAccuracy = Math.round((correctWords / attemptedWords) * 100);
@@ -129,55 +143,98 @@ const TypingTest = ({ duration = 60 }) => {
   const highlightText = () => {
     const words = text.split(" ");
     return words.map((word, index) => {
-        const isCurrent = index === currentWordIndex;
-        const status = wordStatuses[index];
+      const isCurrent = index === currentWordIndex;
+      const status = wordStatuses[index];
+      let letters;
 
-        const letters = word.split("").map((char, charIndex) => {
-            const typedChar = isCurrent ? currentInput[charIndex] : null;
+      if (index < currentWordIndex) {
+        if (status === "correct") {
+          letters = word.split("").map((char, charIndex) => (
+            <span key={charIndex} style={{ color: "#ffffff", position: "relative" }}>
+              {char}
+            </span>
+          ));
+        } else if (status === "incorrect") {
+          letters = word.split("").map((char, charIndex) => {
+            const typedChar = typedWords[index]?.[charIndex] || "";
             const isCorrect = typedChar === char;
-
             return (
-                <span
-                    key={charIndex}
-                    style={{
-                        color: isCurrent && typedChar ? (isCorrect ? "green" : "red") : "black",
-                        fontWeight: isCurrent ? "bold" : "normal",
-                        position: 'relative', // Ensure relative positioning for the caret
-                    }}
-                >
-                    {char}
-                    {/* Render the caret after the currently typed character */}
-                    {isCurrent && charIndex === currentInput.length - 1 && (
-                        <span className="caret"></span>
-                    )}
-                </span>
+              <span
+                key={charIndex}
+                style={{
+                  color: typedChar ? (isCorrect ? "#ffffff" : "#ff0000") : "rgba(211, 211, 211, 0.6)",
+                  position: "relative",
+                }}
+              >
+                {char}
+              </span>
             );
+          });
+        } else {
+          letters = word.split("").map((char, charIndex) => (
+            <span key={charIndex} style={{ color: "rgba(211, 211, 211, 0.6)", position: "relative" }}>
+              {char}
+            </span>
+          ));
+        }
+      } else if (isCurrent) {
+        letters = word.split("").map((char, charIndex) => {
+          const typedChar = currentInput[charIndex] || "";
+          const isCorrect = typedChar === char;
+          return (
+            <span
+              key={charIndex}
+              style={{
+                color: typedChar ? (isCorrect ? "#ffffff" : "#ff0000") : "rgba(211, 211, 211, 0.6)",
+                position: "relative",
+              }}
+            >
+              {char}
+            </span>
+          );
         });
 
-        return (
-            <span
-                key={index}
-                style={{
-                    backgroundColor: status === "correct" ? "lightgreen" : status === "incorrect" ? "lightcoral" : "transparent",
-                    marginRight: "5px",
-                    display: "inline-block",
-                    whiteSpace: "nowrap",
-                }}
-            >
-                {letters}
-            </span>
-        );
-    });
-};
+        const caretPosition = currentInput.length;
+        if (caretPosition < word.length) {
+          letters.splice(caretPosition, 0, (
+            <span key="caret" className="caret"></span>
+          ));
+        } else {
+          letters.push(
+            <span key="caret" className="caret"></span>
+          );
+        }
+      } else {
+        letters = word.split("").map((char, charIndex) => (
+          <span key={charIndex} style={{ color: "rgba(211, 211, 211, 0.6)", position: "relative" }}>
+            {char}
+          </span>
+        ));
+      }
 
+      return (
+        <span
+          key={index}
+          style={{
+            marginRight: "5px",
+            display: "inline-block",
+            whiteSpace: "nowrap",
+            textDecoration: status === "incorrect" ? "underline red" : "none",
+          }}
+        >
+          {letters}
+        </span>
+      );
+    });
+  };
 
   return (
     <div
       className="container mt-5"
       tabIndex="0"
       onKeyDown={handleKeyPress}
-      style={{ outline: "none" }}   
-      ref={containerRef} // Attach the ref to the container
+      style={{ outline: "none" }}
+      ref={containerRef}
     >
       <h1 className="text-center mb-4">Typing Test</h1>
       <div className="row text-center mb-4">
@@ -195,10 +252,7 @@ const TypingTest = ({ duration = 60 }) => {
           </>
         )}
       </div>
-      <div
-        className="border rounded p-3 mb-3 bg-light"
-        style={{ minHeight: "40px", fontSize: "18px", lineHeight: "1.5", overflowWrap: "break-word", overflow: "auto", maxWidth: "1080px", margin: "0 auto" }}
-      >
+      <div className="typing-test-box" style={{ minHeight: "40px", lineHeight: "1.5", overflowWrap: "break-word", overflow: "auto", maxWidth: "1080px", margin: "0 auto" }}>
         {highlightText()}
       </div>
       {timer === 0 && (

@@ -1,162 +1,193 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-const generateCardData = (size) => {
-  const icons = ["🍎", "🍌", "🍒", "🍇", "🍉", "🍍", "🥭", "🥝"]; // Example icons
-  const selectedIcons = icons.slice(0, size / 2);
-  const cardData = [...selectedIcons, ...selectedIcons]
-    .sort(() => Math.random() - 0.5)
-    .map((icon, index) => ({
-      id: index,
-      icon,
-      isFlipped: false,
-      isMatched: false,
-    }));
-  return cardData;
+const difficulties = {
+  easy: { totalCards: 16, columns: 4 },
+  hard: { totalCards: 24, columns: 6 },
+  veryhard: { totalCards: 36, columns: 6 }
 };
 
-const CardTest = ({ gridSize = 4, duration = 60 }) => {
-  const [cards, setCards] = useState([]);
+const ICONS = [
+  "🍎", "🍌", "🍇", "🍓", "🍊", "🍍", "🥝", "🍒",
+  "🍑", "🍐", "🍋", "🥭", "🍉", "🍏", "🥥", "🍈",
+  "🍄", "🥦", "🥕", "🌶️", "🌽", "🥔", "🍠", "🍅",
+  "🥒", "🥑", "🍆", "🧄", "🧅", "🥜", "🌰", "🍞"
+];
+
+function generateCardData(numCards) {
+  const numPairs = numCards / 2;
+  let data = [];
+  for (let i = 0; i < numPairs; i++) {
+    // Use ICONS[i] to ensure uniqueness
+    const icon = ICONS[i % ICONS.length];
+    data.push({ id: i * 2, icon, isFlipped: false, isMatched: false });
+    data.push({ id: i * 2 + 1, icon, isFlipped: false, isMatched: false });
+  }
+  // Shuffle the array
+  for (let i = data.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [data[i], data[j]] = [data[j], data[i]];
+  }
+  return data;
+}
+
+const CardTest = () => {
+  const [difficulty, setDifficulty] = useState("easy");
+  const { totalCards, columns } = difficulties[difficulty];
+  const [cards, setCards] = useState(() => generateCardData(totalCards));
   const [flippedCards, setFlippedCards] = useState([]);
   const [matches, setMatches] = useState(0);
   const [attempts, setAttempts] = useState(0);
-  const [timer, setTimer] = useState(duration);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [gameCompleted, setGameCompleted] = useState(false);
 
   useEffect(() => {
-    setCards(generateCardData(gridSize * gridSize));
-  }, [gridSize]);
-
-  useEffect(() => {
-    let interval;
-    if (isRunning && timer > 0 && !gameCompleted) {
-      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
-    } else if (timer === 0 || gameCompleted) {
-      setIsRunning(false);
+    let interval = null;
+    if (isRunning) {
+      interval = setInterval(() => {
+        setElapsedTime(prev => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [isRunning, timer, gameCompleted]);
+  }, [isRunning]);
 
   const handleCardClick = (index) => {
-    if (!isRunning && !gameCompleted) setIsRunning(true);
-
-    // Prevent flipping more than two cards or clicking the same card
-    if (flippedCards.length === 2 || cards[index].isFlipped || gameCompleted) return;
-
-    const updatedCards = cards.map((card, i) =>
+    if (gameCompleted) return;
+    if (!isRunning) {
+      setIsRunning(true);
+    }
+    if (flippedCards.length === 2 || cards[index].isFlipped || cards[index].isMatched) return;
+    const newCards = cards.map((card, i) =>
       i === index ? { ...card, isFlipped: true } : card
     );
-    setCards(updatedCards);
-    setFlippedCards([...flippedCards, index]);
+    setCards(newCards);
+    const newFlipped = [...flippedCards, index];
+    setFlippedCards(newFlipped);
+    if (newFlipped.length === 2) {
+      const [firstIndex, secondIndex] = newFlipped;
+      if (newCards[firstIndex].icon === newCards[secondIndex].icon) {
+        setTimeout(() => {
+          setCards(prevCards =>
+            prevCards.map((card, i) =>
+              i === firstIndex || i === secondIndex ? { ...card, isMatched: true } : card
+            )
+          );
+          setMatches(prev => prev + 1);
+          setFlippedCards([]);
+        }, 500);
+      } else {
+        setTimeout(() => {
+          setCards(prevCards =>
+            prevCards.map((card, i) =>
+              i === firstIndex || i === secondIndex ? { ...card, isFlipped: false } : card
+            )
+          );
+          setFlippedCards([]);
+        }, 500);
+      }
+      setAttempts(prev => prev + 1);
+    }
   };
 
   useEffect(() => {
-    if (flippedCards.length === 2) {
-      const [firstIndex, secondIndex] = flippedCards;
-      const firstCard = cards[firstIndex];
-      const secondCard = cards[secondIndex];
-
-      if (firstCard.icon === secondCard.icon) {
-        // Match
-        setTimeout(() => {
-          setCards((prevCards) =>
-            prevCards.map((card) =>
-              card.icon === firstCard.icon
-                ? { ...card, isMatched: true }
-                : card
-            )
-          );
-          setMatches((prev) => prev + 1);
-        }, 500);
-      } else {
-        // No match
-        setTimeout(() => {
-          setCards((prevCards) =>
-            prevCards.map((card, i) =>
-              i === firstIndex || i === secondIndex
-                ? { ...card, isFlipped: false }
-                : card
-            )
-          );
-        }, 500);
-      }
-
-      setAttempts((prev) => prev + 1);
-      setFlippedCards([]);
-    }
-  }, [flippedCards, cards]);
-
-  // Check if the game is complete
-  useEffect(() => {
-    if (matches === gridSize * gridSize / 2) {
+    if (matches === totalCards / 2) {
       setGameCompleted(true);
       setIsRunning(false);
     }
-  }, [matches, gridSize]);
+  }, [matches, totalCards]);
 
   const handleReset = () => {
-    setCards(generateCardData(gridSize * gridSize));
+    setCards(generateCardData(totalCards));
     setFlippedCards([]);
     setMatches(0);
     setAttempts(0);
-    setTimer(duration);
+    setElapsedTime(0);
     setIsRunning(false);
     setGameCompleted(false);
   };
 
+  const changeDifficulty = (level) => {
+    setDifficulty(level);
+    // Reset game with new difficulty
+    setTimeout(() => {
+      setCards(generateCardData(difficulties[level].totalCards));
+      setFlippedCards([]);
+      setMatches(0);
+      setAttempts(0);
+      setElapsedTime(0);
+      setIsRunning(false);
+      setGameCompleted(false);
+    }, 0);
+  };
+
   return (
-    <div className="container d-flex flex-column align-items-center justify-content-center">
-      <h1 className="mb-4">Card Test</h1>
-      <div className="row mb-3 text-center">
-        <div className="col">
-          <h5>Time Left: {timer}s</h5>
+    <>
+      <div className="container mt-5 text-center text-white p-3">
+        <h1>Card Memory Test</h1>
+        <div className="mb-3">
+          <span className="lead">Your Time: {elapsedTime} seconds</span>
         </div>
-        <div className="col">
-          <h5>Matches: {matches}</h5>
-        </div>
-        <div className="col">
-          <h5>Attempts: {attempts}</h5>
-        </div>
-      </div>
-      <div
-        className="d-grid"
-        style={{
-          gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-          gap: "10px",
-        }}
-      >
-        {cards.map((card, index) => (
+        <div className="btn-group mb-3">
           <button
-            key={card.id}
-            className={`btn ${
-              card.isMatched
-                ? "btn-success"
-                : card.isFlipped
-                ? "btn-light"
-                : "btn-primary"
-            }`}
-            style={{
-              height: "80px",
-              width: "80px",
-              fontSize: "24px",
-            }}
-            disabled={card.isMatched || gameCompleted}
-            onClick={() => handleCardClick(index)}
+            className={`btn ${difficulty === "easy" ? "btn-success fw-bold" : "btn-outline-success fw-bold"}`}
+            onClick={() => changeDifficulty("easy")}
           >
-            {card.isFlipped || card.isMatched ? card.icon : ""}
+            Easy
           </button>
-        ))}
-      </div>
-      {(timer === 0 || gameCompleted) && (
-        <div className="mt-4">
-          <h4>{gameCompleted ? "Congratulations! You completed the game!" : "Time's Up!"}</h4>
-          <button className="btn btn-primary" onClick={handleReset}>
-            Play Again
+          <button
+            className={`btn ${difficulty === "hard" ? "btn-warning fw-bold" : "btn-outline-warning fw-bold"}`}
+            onClick={() => changeDifficulty("hard")}
+          >
+            Hard
+          </button>
+          <button
+            className={`btn ${difficulty === "veryhard" ? "btn-danger fw-bold" : "btn-outline-danger fw-bold"}`}
+            onClick={() => changeDifficulty("veryhard")}
+          >
+            Very Hard
           </button>
         </div>
-      )}
-    </div>
+        <button className="btn btn-secondary mb-3" onClick={handleReset}>
+          Reset
+        </button>
+        <div
+          className="d-grid justify-content-center"
+          style={{
+            gridTemplateColumns: `repeat(${columns}, 80px)`,
+            gap: "5px",
+          }}
+        >
+          {cards.map((card, index) => (
+            <button
+              key={card.id}
+              className={`btn ${card.isMatched ? "btn-success" : card.isFlipped ? "btn-light" : "btn-primary"}`}
+              style={{
+                height: "80px",
+                width: "80px",
+                fontSize: "24px"
+              }}
+              disabled={card.isMatched || gameCompleted}
+              onClick={() => handleCardClick(index)}
+            >
+              {card.isFlipped || card.isMatched ? card.icon : <span style={{ fontSize: "2rem" }}>?</span>}
+            </button>
+          ))}
+        </div>
+        {gameCompleted && (
+          <h3 className="mt-3">
+            Game Completed in {attempts} attempts! Your Time: {elapsedTime} seconds
+          </h3>
+        )}
+      </div>
+      <style>{`
+        .btn-group .btn:hover {
+          color: black !important;
+        }
+      `}</style>
+    </>
   );
 };
 

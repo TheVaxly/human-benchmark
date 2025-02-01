@@ -1,12 +1,30 @@
+.typing-test-box {
+    font-size: 24px;
+    color: rgba(211, 211, 211, 0.6) !important;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.correct-letter {
+    color: #f0f0f0 !important;
+}
+
+.incorrect-letter {
+    color: red !important;
+}
+
+.untyped-letter {
+    color: rgba(211, 211, 211, 0.6) !important; 
+}
+
 .caret {
     display: inline-block;
-    width: 2px; /* Width of the caret */
-    height: 1.2em; /* Fixed height */
-    background-color: black; /* Caret color */
-    animation: blink 1s step-end infinite; /* Blinking effect */
-    margin-left: 0.1em; /* Space from character */
-    margin-top: -0.2em; /* Adjust this value to shift the caret up or down */
-    vertical-align: middle; /* Keep caret vertically aligned */
+    width: 2px; 
+    height: 1.2em; 
+    background-color: #ecec3d;
+    animation: blink 1s step-end infinite;
+    position: relative; 
+    transform: translateY(0.25em);
 }
 
 @keyframes blink {
